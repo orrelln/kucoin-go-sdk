@@ -92,7 +92,7 @@ func ApiSkipVerifyTlsOption(skipVerifyTls bool) ApiServiceOption {
 
 // NewApiService creates a instance of ApiService by passing ApiServiceOptions, then you can call methods.
 func NewApiService(opts ...ApiServiceOption) *ApiService {
-	as := &ApiService{requester: &BasicRequester{}}
+	as := &ApiService{requester: NewBasicRequester()}
 	for _, opt := range opts {
 		opt(as)
 	}

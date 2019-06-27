@@ -124,24 +124,29 @@ type Requester interface {
 
 // A BasicRequester represents a basic implement of Requester by http.Client.
 type BasicRequester struct {
+	cli *http.Client
+}
+
+func NewBasicRequester() *BasicRequester {
+	return &BasicRequester{
+		cli: &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+				MaxIdleConnsPerHost: 20,
+			},
+			Timeout: time.Second * 10,
+		},
+	}
 }
 
 // Request makes a http request.
 func (br *BasicRequester) Request(request *Request, timeout time.Duration) (*Response, error) {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: request.SkipVerifyTls},
-	}
-	cli := &http.Client{
-		Transport: tr,
-		Timeout:   timeout,
-	}
-
 	req, err := request.HttpRequest()
 	if err != nil {
 		return nil, err
 	}
 	// Prevent re-use of TCP connections
-	// req.Close = true
+	//req.Close = true
 
 	rid := time.Now().UnixNano()
 
@@ -150,7 +155,7 @@ func (br *BasicRequester) Request(request *Request, timeout time.Duration) (*Res
 		logrus.Debugf("Sent a HTTP request#%d: %s", rid, string(dump))
 	}
 
-	rsp, err := cli.Do(req)
+	rsp, err := br.cli.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -181,12 +186,13 @@ func (r *Response) ReadBody() ([]byte, error) {
 	}
 
 	r.body = make([]byte, 0)
-	defer r.Body.Close()
 	b, err := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 	r.body = b
+
 	return r.body, nil
 }
 
@@ -228,7 +234,6 @@ func (ar *ApiResponse) ReadData(v interface{}) error {
 		rsb, _ := ar.response.ReadBody()
 		m := fmt.Sprintf("[HTTP]Failure: status code is NOT 200, %s %s with body=%s, respond code=%d body=%s",
 			ar.response.request.Method,
-			ar.response.request.RequestURI(),
 			string(ar.response.request.Body),
 			ar.response.StatusCode,
 			string(rsb),
