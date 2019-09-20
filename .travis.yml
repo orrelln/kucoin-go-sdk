@@ -11,7 +11,7 @@ go:
   - 1.12.x
   - master
 
-go_import_path: github.com/Kucoin/kucoin-go-sdk
+go_import_path: github.com/orrelln/kucoin-go-sdk
 
 env:
   - GO111MODULE=on
